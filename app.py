@@ -45,20 +45,45 @@ def carregar_dados(caminho_arquivo):
 df = carregar_dados('resumo_fatos_e_topicos_v4_por_data (5).json')
 
 # ==========================================
-# BARRA LATERAL (FILTROS GLOBAIS)
+# BARRA LATERAL (FILTROS GLOBAIS COM "TODOS")
 # ==========================================
 st.sidebar.title("🔍 Filtros Globais")
 st.sidebar.markdown("Use estes filtros para refinar toda a análise no dashboard.")
 
-setores = st.sidebar.multiselect("Setor", options=sorted(df['Setor'].unique()), default=df['Setor'].unique())
-tipos_plano = st.sidebar.multiselect("Tipo de Plano", options=sorted(df['Tipo de Plano'].unique()), default=df['Tipo de Plano'].unique())
-controles = st.sidebar.multiselect("Controle Acionário", options=sorted(df['Controle Acionário'].unique()), default=df['Controle Acionário'].unique())
+# Prepara as listas de opções ordenadas e convertidas para string (evita erro TypeError float/str)
+lista_setores = sorted(df['Setor'].fillna('Não Informado').astype(str).unique())
+lista_planos = sorted(df['Tipo de Plano'].fillna('Não Informado').astype(str).unique())
+lista_controles = sorted(df['Controle Acionário'].fillna('Não Informado').astype(str).unique())
 
-# Aplicar filtros ao dataframe
+# Filtro: Setor
+opcoes_setores = ["Todos"] + lista_setores
+selecao_setor = st.sidebar.multiselect("Setor", options=opcoes_setores, default=["Todos"])
+if "Todos" in selecao_setor or len(selecao_setor) == 0:
+    filtro_setor = df['Setor'].unique()
+else:
+    filtro_setor = selecao_setor
+
+# Filtro: Tipo de Plano
+opcoes_planos = ["Todos"] + lista_planos
+selecao_plano = st.sidebar.multiselect("Tipo de Plano", options=opcoes_planos, default=["Todos"])
+if "Todos" in selecao_plano or len(selecao_plano) == 0:
+    filtro_plano = df['Tipo de Plano'].unique()
+else:
+    filtro_plano = selecao_plano
+
+# Filtro: Controle Acionário
+opcoes_controles = ["Todos"] + lista_controles
+selecao_controle = st.sidebar.multiselect("Controle Acionário", options=opcoes_controles, default=["Todos"])
+if "Todos" in selecao_controle or len(selecao_controle) == 0:
+    filtro_controle = df['Controle Acionário'].unique()
+else:
+    filtro_controle = selecao_controle
+
+# Aplicar filtros ao dataframe final
 df_filtrado = df[
-    (df['Setor'].isin(setores)) & 
-    (df['Tipo de Plano'].isin(tipos_plano)) &
-    (df['Controle Acionário'].isin(controles))
+    (df['Setor'].isin(filtro_setor)) & 
+    (df['Tipo de Plano'].isin(filtro_plano)) &
+    (df['Controle Acionário'].isin(filtro_controle))
 ]
 
 st.sidebar.divider()
@@ -164,7 +189,8 @@ with tab4:
     st.markdown("Selecione uma empresa específica para aceder aos detalhes e aos links oficias da CVM.")
     
     # Campo de busca interativo
-    empresa_selecionada = st.selectbox("Pesquise pelo nome da empresa:", options=[""] + sorted(df_filtrado['Empresa'].unique()))
+    opcoes_empresas = [""] + sorted(df_filtrado['Empresa'].unique())
+    empresa_selecionada = st.selectbox("Pesquise pelo nome da empresa:", options=opcoes_empresas)
     
     if empresa_selecionada:
         dados_empresa = df_filtrado[df_filtrado['Empresa'] == empresa_selecionada]
@@ -186,6 +212,6 @@ with tab4:
                 c3.metric("Proteção (Clawback)", row['Possui Malus/Clawback'])
                 
                 st.markdown("**📄 Acesso Direto aos Fatos Relevantes / Editais (CVM):**")
-                # Exibe os links de forma muito mais elegante e clicável
+                # Exibe os links de forma elegante e clicável
                 for i, link in enumerate(row['Links'], 1):
                     st.markdown(f"- [Aceder ao Documento {i} na plataforma da CVM]({link})")
